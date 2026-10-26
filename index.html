@@ -1,0 +1,632 @@
+<!doctype html>
+<meta charset="utf-8">
+<title>청춘대길 관리</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex,nofollow">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans+KR:wght@400;500;700&family=IBM+Plex+Mono:wght@500;600&display=swap">
+<style>
+/* 레이아웃: 한 손 조작 — 위에 검색·조건 고정, 아래로 통신사별 순위 카드가 길게 흐른다 */
+:root{
+  --bg:#eef2f0; --surface:#ffffff; --ink:#15201b; --muted:#5d6a64; --line:#d7dfdb;
+  --accent:#0d6b4d; --accent-soft:#dcefe6; --accent-ink:#ffffff; --warn:#b4231b;
+  --sk:#c2410c; --kt:#1f4fbf; --lg:#9d174d; --top:#fff7e0; --top-line:#e9c46a;
+  --f-body:"IBM Plex Sans KR", "Apple SD Gothic Neo", "Malgun Gothic", system-ui, sans-serif;
+  --f-num:"IBM Plex Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]){
+  --bg:#0f1513; --surface:#18211d; --ink:#e6eeea; --muted:#9aa8a1; --line:#2b3732;
+  --accent:#4fbf93; --accent-soft:#1d3a2f; --accent-ink:#0b1410; --warn:#ff7b72;
+  --sk:#fb8a5c; --kt:#7aa2ff; --lg:#f472b6; --top:#2b2614; --top-line:#8a6d1f; color-scheme:dark}}
+:root[data-theme="dark"]{
+  --bg:#0f1513; --surface:#18211d; --ink:#e6eeea; --muted:#9aa8a1; --line:#2b3732;
+  --accent:#4fbf93; --accent-soft:#1d3a2f; --accent-ink:#0b1410; --warn:#ff7b72;
+  --sk:#fb8a5c; --kt:#7aa2ff; --lg:#f472b6; --top:#2b2614; --top-line:#8a6d1f; color-scheme:dark}
+*{box-sizing:border-box}
+[hidden]{display:none!important}
+html,body{height:100%}
+body{background:var(--bg);color:var(--ink);font-family:var(--f-body);font-size:15px;line-height:1.45;
+  -webkit-text-size-adjust:100%;-webkit-tap-highlight-color:transparent}
+body::before{content:"";position:fixed;inset:0 0 auto;height:env(safe-area-inset-top,0px);z-index:10;background:var(--surface)}
+button{font:inherit;color:inherit}
+.wrap{padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px))}
+.num{font-family:var(--f-num);font-variant-numeric:tabular-nums}
+
+/* ── 잠금 화면 ── */
+#lock{min-height:100%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:22px;padding-block:32px}
+.brand{font-size:13px;letter-spacing:.12em;color:var(--muted);font-weight:500}
+#lock h1{margin:0;font-size:22px;text-wrap:balance;text-align:center}
+.lockhint{margin:0;color:var(--muted);font-size:14px;text-align:center}
+.dots{display:flex;gap:16px}
+.dots span{width:14px;height:14px;border-radius:50%;border:2px solid var(--muted)}
+.dots span.on{background:var(--ink);border-color:var(--ink)}
+.dots.bad{animation:shake .35s}
+@keyframes shake{25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+#lockmsg{min-height:1.4em;margin:0;font-size:14px;color:var(--warn);text-align:center}
+.pad{display:grid;grid-template-columns:repeat(3,76px);gap:14px}
+.pad button{height:64px;border-radius:50%;border:1px solid var(--line);background:var(--surface);font-size:24px;font-family:var(--f-num)}
+.pad button:active{background:var(--accent-soft)}
+.pad button.txt{font-family:var(--f-body);font-size:14px;color:var(--muted);border-color:transparent;background:transparent}
+.pad button:focus-visible,.chip:focus-visible,.seg button:focus-visible,#q:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+
+/* ── 검색 화면 ── */
+header{position:sticky;top:env(safe-area-inset-top,0px);z-index:5;background:var(--surface);border-bottom:1px solid var(--line);padding-block:10px 8px}
+.toprow{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:8px}
+.car-seg{margin-top:0;flex:none}
+.car-seg button{height:34px;padding:0 14px;font-weight:700}
+.car-seg button[data-k="SK"][aria-pressed="true"]{background:var(--sk);border-color:var(--sk)}
+.car-seg button[data-k="KT"][aria-pressed="true"]{background:var(--kt);border-color:var(--kt)}
+.car-seg button[data-k="LG"][aria-pressed="true"]{background:var(--lg);border-color:var(--lg)}
+.toprow b{font-size:16px}
+.basis{font-size:11.5px;color:var(--muted);text-align:right;line-height:1.3}
+.basis em{font-style:normal;color:var(--warn);font-weight:700}
+.searchbox{display:flex;gap:8px}
+#q{flex:1;min-width:0;height:44px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:16px;background:var(--bg);color:var(--ink)}
+#q:focus{border-color:var(--accent);outline:none}
+#clr{flex:none;width:44px;height:44px;border-radius:10px;border:1px solid var(--line);background:var(--surface);font-size:18px;color:var(--muted)}
+.seg{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;margin-top:8px;padding-bottom:2px}
+.seg::-webkit-scrollbar{display:none}
+.seg button{flex:none;height:32px;padding:0 12px;border-radius:16px;border:1px solid var(--line);background:var(--surface);font-size:14px;white-space:nowrap}
+.seg button[aria-pressed="true"]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);font-weight:700}
+.hot button{border-color:var(--accent);color:var(--accent);font-weight:500}
+.hot button[aria-pressed="true"]{background:var(--accent);color:var(--accent-ink)}
+.sub{background:var(--accent-soft);border-radius:10px;padding:6px;margin-top:6px;flex-wrap:wrap;overflow:visible}
+.sub button{height:30px;font-size:13.5px;border-color:transparent}
+.sub button[aria-pressed="true"]{background:var(--surface);border-color:var(--accent);color:var(--ink);font-weight:700}
+.seg button small,.chip small{font-size:11px;font-weight:400;opacity:.75;margin-left:5px}
+.seglabel{flex:none;align-self:center;font-size:12px;color:var(--muted);padding-right:2px}
+
+main{padding-block:12px 40px;display:flex;flex-direction:column;gap:18px}
+.sug h2,.car h2{margin:0 0 8px;font-size:13px;color:var(--muted);font-weight:500;letter-spacing:.04em}
+.chips{display:flex;flex-wrap:wrap;gap:6px}
+.chip{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:7px 10px;font-size:14px}
+.chip:active{background:var(--accent-soft)}
+
+.car h2{display:flex;align-items:center;gap:8px;font-size:15px;color:var(--ink);font-weight:700;letter-spacing:0}
+.car h2 i{font-style:normal;font-size:12px;font-weight:700;color:var(--surface);padding:2px 7px;border-radius:5px}
+.car h2 small{font-size:12px;color:var(--muted);font-weight:400}
+.car[data-c="SK"] h2 i{background:var(--sk)} .car[data-c="KT"] h2 i{background:var(--kt)} .car[data-c="LG"] h2 i{background:var(--lg)}
+.list{background:var(--surface);border:1px solid var(--line);border-radius:12px;overflow:hidden}
+.row{display:grid;grid-template-columns:28px minmax(0,1fr) auto;column-gap:10px;row-gap:2px;padding:11px 12px;border-top:1px solid var(--line)}
+.row:first-child{border-top:0}
+.row.first{background:var(--top)}
+.rk{grid-column:1;grid-row:1/span 3;font-family:var(--f-num);font-weight:600;font-size:15px;color:var(--muted);padding-top:2px}
+.row.first .rk{color:var(--ink)}
+.dl{grid-column:2;grid-row:1;font-weight:700;font-size:16px;min-width:0}
+.tot{grid-column:3;grid-row:1/span 2;text-align:right;font-family:var(--f-num);font-weight:600;font-size:24px;line-height:1.1}
+.tot small{font-size:12px;color:var(--muted);font-weight:500;margin-left:1px}
+.parts{grid-column:2;grid-row:2;font-size:13px;color:var(--muted);min-width:0}
+.parts b{color:var(--ink);font-weight:500;font-family:var(--f-num)}
+.req{grid-column:2/span 2;grid-row:4;font-size:12.5px;font-weight:700;color:var(--warn);min-width:0;overflow-wrap:anywhere}
+.meta{grid-column:2/span 2;grid-row:3;font-size:12.5px;color:var(--muted);min-width:0;overflow-wrap:anywhere}
+.meta .hd{color:var(--ink)}
+.empty{padding:14px 12px;color:var(--muted);font-size:14px}
+.foot{font-size:12px;color:var(--muted);display:flex;justify-content:space-between;gap:12px;flex-wrap:wrap}
+.foot button{border:0;background:none;color:var(--accent);padding:0;font-size:12px;text-decoration:underline}
+@media (prefers-reduced-motion:reduce){.dots.bad{animation:none}}
+
+/* ── 탭 (2026-10-23): 단가 검색 + 글로 된 정책 ── */
+.tabs{display:flex;gap:2px;margin:-2px 0 8px;border-bottom:1px solid var(--line);overflow-x:auto;scrollbar-width:none}
+.tabs::-webkit-scrollbar{display:none}
+.tabs button{flex:none;border:0;background:none;height:36px;padding:0 11px;font-size:14.5px;color:var(--muted);border-bottom:2.5px solid transparent;margin-bottom:-1px}
+.tabs button[aria-selected="true"]{color:var(--ink);font-weight:700;border-bottom-color:var(--accent)}
+.tabs button small{font-size:11px;font-family:var(--f-num);margin-left:3px;opacity:.7}
+.tabs button:focus-visible{outline:2px solid var(--accent);outline-offset:-2px}
+.tcards{display:flex;flex-direction:column;gap:8px}
+.tc{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:11px 12px}
+.tc .hd1{display:flex;align-items:baseline;gap:8px;flex-wrap:wrap}
+.tc .dl2{font-weight:700;font-size:15px}
+.tc .tg{font-size:11.5px;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:1px 6px}
+.tc .tg.w{color:var(--warn);background:transparent;border:1px solid currentColor}
+.tc .am{margin-left:auto;font-family:var(--f-num);font-weight:600;font-size:17px;white-space:nowrap}
+.tc .am.tx{font-family:var(--f-body);font-size:14px;color:var(--warn)}
+.tc .tt{margin-top:4px;font-size:15px;font-weight:500;overflow-wrap:anywhere}
+.tc .ln{margin-top:3px;font-size:13px;color:var(--muted);overflow-wrap:anywhere}
+.tc .bd{margin-top:6px;font-size:13.5px;color:var(--ink);overflow-wrap:anywhere;white-space:pre-line}
+.tc .bd.clamp{display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden;white-space:normal}
+.tc .more{border:0;background:none;padding:4px 0 0;font-size:13px;color:var(--accent)}
+.tc .kv{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:2px 10px;margin-top:6px;font-size:14px}
+.tc .kv b{font-weight:700;text-align:right;white-space:nowrap}
+.tc .kv small{grid-column:1/span 2;font-size:12px;color:var(--muted);margin-top:-1px;margin-bottom:3px}
+.cgrp{margin:6px 0 2px;display:flex;align-items:center;gap:8px;font-size:15px;font-weight:700}
+.cgrp i{font-style:normal;font-size:12px;font-weight:700;color:var(--surface);padding:2px 7px;border-radius:5px}
+.cgrp[data-c="SK"] i{background:var(--sk)} .cgrp[data-c="KT"] i{background:var(--kt)} .cgrp[data-c="LG"] i{background:var(--lg)}
+/* ── 요금제별 (2026-10-24) ── */
+#planctl{margin-top:8px;background:var(--accent-soft);border-radius:10px;padding:7px 8px}
+/* 2026-10-24 대표: 요금제 판이 화면을 다 덮어 단가가 안 보임 → 평소엔 한 줄(고른 요금제)만, 누르면 펼침 · 이 탭은 머리 고정 해제 */
+body.plantab header{position:static}
+#pbar{display:flex;align-items:center;gap:8px;width:100%;border:0;background:none;padding:2px 0;text-align:left;font-size:13.5px;color:var(--ink)}
+#pbar .pv{flex:1;min-width:0;line-height:1.45}
+#pbar .pv b{font-weight:700}
+#pbar .pv small{color:var(--muted);font-size:11.5px;margin-left:3px}
+#pbar .tg2{flex:none;font-size:12.5px;color:var(--accent);font-weight:700;white-space:nowrap}
+#pbody[hidden]{display:none}
+#pbody{margin-top:6px;border-top:1px solid var(--line);padding-top:6px}
+#planctl .pcars{display:flex;gap:6px;align-items:center}
+#planctl .pcars button{height:28px;padding:0 10px;border-radius:14px;border:1px solid var(--line);background:var(--surface);font-size:13px;font-weight:700}
+#planctl .pcars button[aria-pressed="true"][data-pc="SK"]{background:var(--sk);border-color:var(--sk);color:#fff}
+#planctl .pcars button[aria-pressed="true"][data-pc="KT"]{background:var(--kt);border-color:var(--kt);color:#fff}
+#planctl .pcars button[aria-pressed="true"][data-pc="LG"]{background:var(--lg);border-color:var(--lg);color:#fff}
+#pq{width:100%;height:38px;margin-top:6px;border:1.5px solid var(--line);border-radius:9px;padding:0 10px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink)}
+#pq:focus{border-color:var(--accent);outline:none}
+.plist{display:flex;gap:6px;flex-wrap:wrap;margin-top:6px;max-height:132px;overflow-y:auto}
+.plist button{border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:5px 9px;font-size:13.5px;text-align:left}
+.plist button[aria-pressed="true"]{border-color:var(--accent);background:var(--accent);color:var(--accent-ink);font-weight:700}
+.plist button small{font-size:11px;opacity:.75;margin-left:4px}
+.pnow{margin-top:6px;font-size:12.5px;color:var(--muted);line-height:1.5}
+.pnow b{color:var(--ink)}
+.band{display:inline-block;font-size:11.5px;color:var(--accent);background:var(--accent-soft);border-radius:5px;padding:0 6px;margin-left:6px;font-weight:500;vertical-align:1px}
+.prep{padding:10px 12px;border-top:1px solid var(--line);font-size:13px;color:var(--muted)}
+.prep b{color:var(--ink);font-weight:500}
+.pnote{font-size:12px;color:var(--muted);margin:-8px 0 0}
+mark{background:var(--top);color:inherit;border-radius:3px;padding:0 1px}
+/* ── 대표·이사 전용 (2026-10-25) ── */
+#pwf{display:flex;gap:8px;width:min(340px,100%)}
+#pw{flex:1;min-width:0;height:48px;border:1.5px solid var(--line);border-radius:10px;padding:0 12px;font:inherit;font-size:17px;background:var(--surface);color:var(--ink)}
+#pw:focus{border-color:var(--accent);outline:none}
+#pwf button{flex:none;height:48px;padding:0 18px;border:0;border-radius:10px;background:var(--accent);color:var(--accent-ink);font-weight:700;font-size:16px}
+.rem{font-size:13px;color:var(--muted);display:flex;gap:6px;align-items:center}
+.chap{display:flex;gap:6px;align-items:center;margin-bottom:8px}
+.chap button{height:34px;padding:0 14px;border-radius:9px;border:1px solid var(--line);background:var(--surface);font-weight:700;font-size:14.5px}
+.chap button[aria-pressed="true"]{background:var(--ink);border-color:var(--ink);color:var(--surface)}
+.chap select{margin-left:auto;max-width:52%;height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;padding:0 8px}
+.chap .old{color:var(--warn);font-weight:700;font-size:12px}
+#mctl{margin-top:8px;background:var(--top);border:1px solid var(--top-line);border-radius:10px;padding:8px}
+#mctl .g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px}
+#mctl label{display:flex;flex-direction:column;font-size:11.5px;color:var(--muted);gap:2px}
+#mctl input,#mctl select{height:38px;border:1.5px solid var(--line);border-radius:8px;padding:0 8px;font:inherit;font-size:16px;background:var(--surface);color:var(--ink);min-width:0;width:100%}
+#mctl .h{font-size:11.5px;color:var(--muted);margin-top:6px;line-height:1.45}
+@media (max-width:420px){#mctl .g{grid-template-columns:repeat(2,minmax(0,1fr))}}
+.mg{font-family:var(--f-num);font-weight:600}
+.mg.neg{color:var(--warn)}
+#tkctl{margin-top:8px;display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+#tkctl select{height:34px;border:1px solid var(--line);border-radius:9px;background:var(--surface);color:var(--ink);font:inherit;font-size:13.5px;padding:0 8px}
+#tkctl label{font-size:13px;display:flex;gap:4px;align-items:center}
+.tksum{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13.5px;line-height:1.6}
+.tksum b{font-family:var(--f-num)}
+.tk{background:var(--surface);border:1px solid var(--line);border-radius:12px;padding:10px 12px;font-size:13px}
+.tk .t1{display:flex;gap:8px;flex-wrap:wrap;font-weight:700;font-size:14px}
+.tk .t1 span{font-weight:400;color:var(--muted)}
+.tk .t2{color:var(--muted);margin-top:2px}
+.tk .t3{margin-top:4px;display:grid;grid-template-columns:auto 1fr;gap:2px 10px}
+.tk .t3 b{font-family:var(--f-num);font-weight:600}
+.tk .bad{color:var(--warn)}
+</style>
+
+<div id="lock" class="wrap">
+  <div class="brand">청춘대길 · 대표·이사 전용</div>
+  <h1>비밀번호</h1>
+  <form id="pwf" autocomplete="on"><input id="pw" type="password" autocomplete="current-password" aria-label="비밀번호"><button>열기</button></form>
+  <label class="rem"><input type="checkbox" id="rem" checked> 이 기기에서 기억</label>
+  <p id="lockmsg" role="status"></p>
+</div>
+
+<div id="app" hidden>
+  <header class="wrap">
+    <div class="toprow"><div class="seg car-seg" id="cars" role="group" aria-label="통신사"></div><span class="basis" id="basis"></span></div>
+    <div class="chap" id="chap"><button data-ch="단가표">단가표</button><button data-ch="마진">마진검증</button><select id="cha" aria-label="차수"></select></div>
+    <div class="tabs" id="tabs" role="tablist" aria-label="보기" hidden></div>
+    <div class="searchbox">
+      <input id="q" type="text" enterkeyhint="search" autocomplete="off" placeholder="모델명 (S942N·942·175) 또는 S26" aria-label="모델 검색">
+      <button id="clr" aria-label="검색어 지우기">✕</button>
+    </div>
+    <div id="pricectl">
+    <div class="seg hot" id="hot" role="group" aria-label="주요 모델류"><span class="seglabel">주요</span></div>
+    <div class="seg sub" id="sub" role="group" aria-label="세부 모델" hidden></div>
+    <div class="seg" id="types" role="group" aria-label="판매유형"></div>
+    <div class="seg" id="caps" role="group" aria-label="용량"><span class="seglabel">용량</span></div>
+    </div>
+    <div id="planctl" hidden>
+      <button id="pbar" aria-expanded="false" aria-controls="pbody"><span class="pv" id="pnowbar"></span><span class="tg2" id="ptg">바꾸기 ▾</span></button>
+      <div id="pbody" hidden>
+      <div class="pcars" id="pcars"><span class="seglabel">요금제</span></div>
+      <input id="pq" type="text" enterkeyhint="search" autocomplete="off" placeholder="요금제 이름으로 찾기 (예: 초이스, 115, 라이트)" aria-label="요금제 검색">
+      <div class="plist" id="plist" role="group" aria-label="요금제"></div>
+      <div class="pnow" id="pnow"></div>
+      </div>
+    </div>
+    <div id="mctl" hidden>
+      <div class="g">
+        <label>프리 총액<input id="m_free" inputmode="decimal" placeholder="0"></label>
+        <label>그중 추가지원금<input id="m_add" inputmode="decimal" placeholder="0"></label>
+        <label>선납금<input id="m_sun" inputmode="decimal" placeholder="0"></label>
+        <label>대납(부가·요금제)<input id="m_dae" inputmode="decimal" placeholder="0"></label>
+      </div>
+      <div class="g" style="margin-top:6px;grid-template-columns:1fr"><label>부가서비스<select id="m_sub"><option>유치</option><option>미유치</option></select></label></div>
+      <div class="h">단위 만원 · 과세 기준 = 합계 − 미유치 차감 − 추가지원금(SK·KT) / − 프리 총액(LG) · 부가세 15% · 마진 = 합계 − 부가세 − 프리 + 선납 − 대납 − 수수료 4</div>
+    </div>
+    <div id="tkctl" hidden></div>
+    <div class="seg" id="dls" role="group" aria-label="거래처" hidden></div>
+  </header>
+  <main class="wrap" id="out"></main>
+</div>
+
+<script>
+const META = {"v": 1, "iter": 600000, "salt": "/yCrjppmjBXBuA4NjkEVlA==", "made": "10/26 12:20", "list": "urYOUqYz7jQFCBXrxmh49aJLD7FtXASmOemFswAPM4bdMIbgg/ZAhbCJD0iZ1JkIrnmvYYDBuJalTQrQ0TVbqDFwNc+Zg/iiIObJejvKGZwH+ZGTyjGJHKVg14dNow/j+3Lb/YgxzKsrlhZokwrizncOk43Tm/qmVLl2/RFJl0wiWeXnSdA1dixY9bA9VZOfnfkNZsNagNgaYlQ4R/YY8LmKKgngps2Lhc7FooO5hOE7i+I8j0s26I1gXCU1KkOjuusexNgnCEExIR7NjTXqiOPSy79PcYBXK/8prJl02GF+R0C2xeTNuFcPbY+AkBKKGH6aMvJm3UihI3zOS7pm1MMv2HYgW53lPSX+3LMvYrq3uKa3RnaQJJ0TFsH8Yf0WV67Prf2pdNTg9Bm5kt3PZsGspBCJmuN8M7UpvTH/i6eknWUdpIj0gQZca0eACBycQo02/wA7HwBkoSvzpiQ1YU+tWYTVvIng5cXbpcbBonKQabFqYAYCDpHtKwJ0Kz2dL7gt55/X7Mf9PsGN1KXLHB3+NCwCQsHGetTQgBmXdeCQPoD94Wz9DsULJ6Jc1UZoKKu+a4JiOX1HHGtpXUmW+RH8zuNuZASW+TalCVhDo/3+oBrX6aqsIeLx7izlw1F3B58/YCAcmUw1JIUMC6QvH/apeog26IgDllNWht1jMQPyL0M4oLmsd0Pzyf8jYSpT6Te1OWQ58RY5QOMiK2IV5xIhgHBsOh5tATjvCNS1MxnOnO77ZRXufWOqF50c15oCg6lMFKBOP71nvxzcwkEdDDVJBvV4X4/tuod9E3cryxsJJLtoYTpRQ8igxsPckLMlbZBqmU8EWFMMK5UiRBf4X4MjIsnqdnB1dXOAuF+VEXwneU27FAaa+gJbGMQHHhYRaE86Y3bs9yDa8aCEemidMV7qtWcnC/gOdqaTooeI71WVmrX2Xz8YkhjgAn6MIhqUvJssD0trDEhqGRyq2eFlLW2+jWGjqVDDaz9IXgwzTF/SfcobOjTvkcmYoDQNbWyuH6OPa9jfmeXMP+u4RZkFe2H1nQVKaJogwxLBT8q9x+TZiOuhGnNpSAPUvSMmVONUtKiKz4JRZ5pOzBTq5E0lPHViN5ncSgoGxyPEGQTdyZjdeI3UWyNkHpw7pH2o7pUe6JRsby9nFmUMLXO2TJIaLR6Q1nafDuRyZKip1mGaXmT9NPqUNbpFoB0gGVbKSOepYOXLDEizCPcpg3+DjNiDwawJGGO4FYc5NwP3KUwAyVhQTzJnjooXrDd9HoW/SJAAiDUGuUWGTvGyqHqSUiL/dHYiFNqtpvjAv8QJlj926rEK/ClnDdIWrl1y4RnNKRxxA0G1YAY/iTDAaWuY/ttRMev8g4dSpCDZTd6CPtqI3b8C3yXBphGyGgtZhOnkmOdHjAGAfgzW1ujTfaeZ8Afq/sTQuoVjIHDWlEMZDqiIWUTmSilAdRo7xrYEReAiWzdNikIOBQDWaKbCPyHEtzpWqCG4Xy+cmv5ieSuwcqRvvxjhmcnP9Jzh7/0snpTHxWvnLJd8c4hdeJWpJ3ek6ZQdV1ikWsU2kcukVMfjL5PudjnGX1ymF5yMw5ZcOcLSQsYyJvbzKJ8fW0XJTVuWkLsbqFh0DYrQTCEx8MgfeDu680SwZ5FwyF9x2CrPE9eJd3TPUy74Gf9CtpVsDp9amVZ5r2x+/HEKcHDDane3CR5Nn72WEhs8Q2voaH/LrFdE7YWAqH2ApcOLwLAisBU9zQjd2n/NtuDqsdt14DqjGh001oWOTXkyp+l/MQY0OPiIrYUUldWLhdUt0FEdHuUcKKfvV1UcOtSN7cI/hWZoiecxzjnOemRtELVFW4fqXOD8yh66ewolNwjBTQqLCm6aCBD25m53KxdffFHVxnn5bOVt/U4LoXAXmihOyBQ5UpPDGkP9sQhS999Iy6p7eyrG6lCBc2SV971999TBHtUnsYbhdnjMwccJdqNWTcYHMkGw2rp+cX7WQGgQdi4uc5AIhZCuCLGTKKRa5kSZdDLu9zEIs4cRLiCAHdDY7ZCkqj75C9Lsq8OllYUyTirY+1Sf33Ui0CscvLJKQZTZSGDWozJsqQ72JsTlCHpbwLlL6X4+k/N+a9MUDJq9HuEbcdLBEpwVukk5Z0NAjLfbVs7Xtpf3VHRZNoEaOD83dIqLo0qjgEM6FkIEshTUk4voVg9WDsqtIGHVPZQUc7txL2UNNEmnk+YEczlHYSUEui4pJfvJM1OQSNxt0UnFMaWqMt0ZT3qGPoZ45pWNW6xp6oo5RW2PGOhAptng3N9tm42gxBGDaTPUVS+sWbHGUH8vhFilOu07Ql4SYcqXLUiq3AB0SfcJ6A0MovuQwPQdSP6j10bASX4Vq18xO3mg7r39sZ6NNJFAXH2EVNlPh1xa5iOdsuIz52HaeNen414Db8zgwQt7T8EyYuyvQe3NZmm3h+h7sXP44c/gQpHJEPLw2lphotap9MPPSQ1OHf5YG9xBDhC91grsro0iujlTwK2ZncfwRXs/VsiLKrzTxNveQYMJJ4iJDt592VeYaa3lwxAfUyccsUC+dMJomK7HqSQi9UWjoRix4kcaBePNTztWJzDIcRYB5t2BpTqO0l+tRz45nmHblPu9W3R0/pze+09mLw7IC+0je0w6aBjaTuQnOAPHaHk+2sVpk+JCrxZVsCl0udPT37q8Ovgt0YIkVVOQNr7Xnrbpr4moFJx4dVhwuz5IkYfwB8ciStchQC8y410bAnN/Rewdawjf8fzedd3aiEimQFoq+37df2OUOslPBThDW3Ym2d/6R8TGRRR8zRGiZTfcDGZEw15qGzobVIYQO1QXqU861ZKP1hpHAav6+ZPSOtwZDpFaJ7hVz80LX78vG29vcE73QAFbPzGfAvFbqKe5tSNXBsbCQYfTWatY8znvV5VftimvOMn/Vd3zEO0QkSbK5qscwUifNrQa1YxMdmgl3eshOohhkRA+jDewPQ7GAG8AqsWcM1f+nwPYVCuJzB7xyB34tLY7V2n5TETIn2XqC1vB3iUKOCcVbyJjbwF3q019LmBWd5iEiIfys7gkvhEijgtbtUeSts0zTewsehNsBkAvNlraVlc4rm1miRW2OLZ8s/nKE87HpePiOTjgmml9w5gf8PH15g826waRygtcCHPCo1izgJZVvGkZFCx/tE9meeMMSZ9zBGQilZnuiv+LBUZ7xRLCoSeCe8EtsIqu1UkipVwwbPa5UwFr2fktk0ibS5QteSXJ8wXyR9eG2Ru5uYMC7qBpW7l//KiRxe2QWboBPs9Rbhg0qeqkjVBeWBzTop9OdM+ueo6o0h35O+/+e306Ee4L/iwkemKoULXpdHlvMTTKQqMVi947sCxr/m1Wnh1Mk3wTYd2Q5ff7gvxkw0/J7yKknNUDcmVqHqINwWLOsHki1dBWlzJB6MA7HN+Ky60vDNeA0qF2XGxbIuB9HX7aSDomcvhQ8P07LS3Ez5gDYvt1VC4orC9MIRAdFJdUbd9COv2n9h2+eL3cJaCXys7K1k2SbIBgSf07r1k+YdRXMoKYcW34jjGpnOsqgFYnkr2D/5GX6/qIl1BWrt9bjn14uaNJUpOZhPeKxAZ+ouzcEFp6HGngQZjlF4hRkOBiPiTzD9VxaU/zfc36NO0Bk98pQxb/IWwCV/mll9Oe6bqAu5TsYeVq2gEOi+EX9fjfdqu7dP1H9o7t8PLB5pTQLCq+1EyffU9VTFv8/R5+58rBAg4EDNzW64DEatTbpHitORhtMPaMBxPnVjWVgQtHzFo2dbpPOX5tpYMaK1Db/i5ut4fhRyknOZLMi/e12tWYR8GtNPP7MDZgTkTHhD+QfRMpRl7QEaKRfLo80cuNvMMrFuSZDNSGV1mmTyutGIac+oVukPUxcB0csxQKOI9fNG2Qj3adGaHK/9RCzPlEO4sZTPYQe1bg4fgwIwUXLjZjepFBjoE35U6s4HIn9Kl8Ml6WNYCzq6FRa/t2FzF8WH0YIkE/waekYPLhKV1rhScYjsA9QH8T13+M5S4jkyrGejYFEXn27l/cXFn94lPk61tvaO213swaJQCk1tDrc0S1/fbGrhaaJxwPw9z2nL9hshyDZgpSBPzbZCa0Acu7Y48jkpwU2N2wEJSi5exLkUPcPUspNoK1try64XoepNA9tuaO57GEI82NplYa1xjdo7iPfA3lu3/vR3e/EwC7Gi/0FMtahJXX1ykQBkLe77WZY0PQC8yqBYPUe+xsJ9cCkAO8XN0tn2pyyOjo8jo/5rHaKbXQGrAxfWyF6pb4rATNQJ4hElX9ZsvdebsCfNQQU2aCfIrgQrCK33WD+RmaUGZUR84tnRyZl2FzbNQbk1ogjcO9aXR85NasytwbpctwgMthZfeqOZ7l46Ar9yBo/1YtBXlLYMat+PfUTFX209bEuHLRX4oRyVNNuhO1fPTfUhaMjFTk9XDJ76EDCCrME4a+8KBwNszWdAuIXpluzNM8ESNLB+6Igxb2PxkbCqrd4dedFnXslWb0dRBlwpULxAO/168JgwPYVO/TkcQC/fi6sTdQgq0VsY9yqBf4y3yTR1UBTLIFVUXvZdhQK6y9oKumBSTL+NauZwm6DuO12RzWm2htAiUqHOqwceLdOL+2pFXf+4hB12K59QWG0lToKRJgNh30zi25+Me4Ibtmah40IQxxgmEdG+gzy42qVtopsfTceFEd5oRQSia+yzjuR+18XJOc0eGtbamiR9hVmvRv+CNYsgEggpRYrOBF1tBqHlgDnurJxOoRXjhecxVcxcj6rotXSQYYBvkErZNCMxFpwi5P1etnBYHV6ABC8qxkSyysri93xvejYdPajmn5vuj7i3jdj5ScNov6NYT/hJYcKM9U3atgDEgU964HCPLU1+swhV2qXy730Ra5aIT3GIBMM/bgmyT+FjvhjvyD5SDf8fjBFOkPtTo815RAgyOlNHGB20UL5UJz3kXmp00FBgfAUhj8Yo8ZFph0xjy8JNPcvWBgJXKfh/rAcrkbu4anTw+GV7EIjqmEw1igNEvDKfKOs1lGH+OgbI2fBZBRvh9Zg80C88+ok3aHrQ2w7HvgIPvxH4V3K8opiYn8IwenSOIT+yFuNpQNsbtZYyeJm1B/vDsSYVy3Ag0HFRt6nznhPZdCpp3XnPZk1Xqw/fYEnO9zBcdjs1AKE8Jfr+0NedwF17UpHNHQlIy2NRyPfLWajhLJNzjrAxSonFRvwwxC5AAFPH0HDlL9JEnlPbUJTC9cT5OhKxmPuvmP1Z5db5TtMYIX5Flem/SJZUXx4j1kamHnzFkBq4MPEEJiJDJ/rBTsqNUjw/saVMI4iOpmS1gfF6AP4vs7IpGEvuIoguYoM+CSi53PbhzxT7aENbru6RFDFwljLW+wI0zjI1quKog4cLtr9T0k+Yj4yO6EUixSMtJLq1AaIUh+wl4/U5+u1X0XZb4x9M8r8qUbS5RhMQrEiTsPzTTlXkDpT6Z0hixCzZGSgAPMM7pErNVwmf4q9ULhDeESPLIkuStIPHH4+QJgD2nhiYu9ttKLPqIIXNDagopoJHmq7Uzy1n6RLLYCmOkjhBaqNXd6FeygH4d2mjG1EraV3uWbYuK1wlONyj54gbHtD97LF+0NBra8GG9IuuE6E2v4BduRibKOXS4fW54cwhO4o37MixLnap71iqbbaTXbRRmXTMjRMZrCqmGzw4YrJnF9CVN3Tuf2xU9O2O6IGwUtEEcmZmsTlGqaaXC41bF2ZsbkBdtyuRd/AUYIxa28qOSIkrsDAz/BbO1HPhSg1tczsmKFdkR5QYeuDUYSPDtY09vWfbhvLdOaR9ZvkafHH9Na5WMoqnJZiWFAjyjvSIN2a7N+Wy+elDYxnhNHoGXeaKrnYZgqZTZVKpzBVikiUbC4yjlberEFyFiMi4OZRy45PvR0OqpN8rNYobKL5H9GD075I8nScmKZza/pbPvK04Fe5OZ1W/k9b0ZWpUlKtZdre6nLkNelZqSsY+8MH5frfQfH4OGL66vNBad43KRtfsdsOblI2EdyLx2d2dcetgFR+OX1mjj9OiWo66ZGt9wd3uIEPEk8XjJ6RT+IRGX/TJnA6Y4Yc+cNGbT8IHhaF80TszsMSKpAnJ4/2crQyVFqOf/kTg036+lEjPy2+2tXY2OQGKz4T4nzKtnWIuCRxYKQGMcGWQD2cvQ07jiGuHnfsY710JUmXz/lffwOIo+W4Nsp6XunEqL27TzUXpPTRRWj2ILgjWqCL7uiJDs2vA0oWhgycKuoz5z99EyYKLvJSF7LcrYoKbNUlj3UfylnYD5xrGuc6YtAum9HINJvaQ7uyYWQulsIXoWkWFCcJuJFlRbnsXzJ29fhh10LBSJSOxQhoz8CJl7LjP2kFhQW2YF6kvDeNsTaXKucd5PXRGiy6vR0F7V9YB2aLsaKLlUk5jVum1yeEHzpvuen+PC9YMIBnM7nX2NtSosKytbHbf/OIr1CpkEwzi/jY9/W65Zbv6GzDAm59aFNXiLnv6PQxzzu4qvrNNam2NaPje9kepMMZPHmiVOZscZZzcEgg02JjLTpxk5x68Ayrbh74OsOl2YGQAgIsalASifxvY7fImkLjdX8aLYAhCfepnkZoxjF+aaCJcsnKKS9q0E2ptD3Q9nuX5GrUjOFlYBAX81N5Rwo5mQciA0IH7Xi186XD9XMpPayGkSlBtDL/2C//Dh4d28A9bx+bu5ncEe4mfxz/Web0iD7B84MHuoa5gCSSWa9qf+nCcnZK1pXfmGRBOwc7HnfETWwxjJ0f2CTx/qHyONhiMCwxLwZ2J+55lp4dOjaLzeIr+Fnqb80YKQzu0x1yMQWn2J68jAW8QemQcR/H1R5VzjZOvSQHYfHAG8lqCKoAO9Z6J4FTxGF8Ye0llrIwxGsKwxnxIPFgDZQ2xLDacGU+sIMMCvvkKnz0Ph168Rj/V3wSwLhLXkuJWgZj5IcOPTN6vy/nSCOtdSIinlXCxcsE+TYVcR5sC8fEyonrSLzYyUGZSuOkkJqA8cAWfIHl5ECMCbZ1uMJ7L9wqvcXO+Y2whC7ewtPPDj9FhsKQR7AcD6FEbqIiYEj8CK++C3LtzMsjMXQOjEMFsBSnmlGRvrwzQyT0RqSk0Tf6Z3mYsgLwdtDV61ZF7OgYQHTSrM9gM2QAKhjp3c4xgk/BnkG1Eq3+3BcG54X7e8Zn8joJNHZsUn7x3cLx4olY9A5Kxz2gCmv9DpfGBfq79hJ+Hd154pi6ILCVUQBCLjyMIC5DfPATZVfgD/k5Oe7chS+NjcvVYCFNFAFw5j2B2mXRO/mBrueG7zbvsy7H7Rnw4jFXDiDHYs4kdPtTyPK92h/Fb8uQfQe19pHMhj1nUYe3cMrvyb1VtN3YwL/+aS2sgaSGV797TFTLixjBUmY6X/2qG5tDxbgmuCkpoBYboI2Z9kUXHq22bvTCxY3Q50zmrPIeJb6FqVyGsYpKJIkfUDFjS/8+QZDrXQaJ8Zo2345wLkTlopDNkd8Ez5mgAU5rxchDjLdZbdvTiB0ZKHeW8Bsu3GR5aMX/30oVkeR5i45LmXkVOSqQlhBWsBEDGyTWyzmn/oyTStbVfazzEChC5UClxkiSnGh/eJ4NvhcIZuHqcmwstIGwVjjxLSR24HDlOPOuvkTv23/jweZRnSQ4jL5oWznFYVJx8Q/183frXOcKGFB0KcGedDE3J6WTp/Lz4mpRtqcwfy7dgNALNbRkf0UOlTmfKRl0xpX8VcQoNu4s3/sQLbvGt49ZqGCpSKPpKREhqBgCDsDbFE4BrDfH95Efs/u9ICjcRA8iAlOfcd7x4RYNuPxLTX1uPJdCyThBJpQnp41j+lE2VuqXTuFtLWWUkyB+soU1L0La5h8Ahjvp15bHsutbVcWMnn597gjaEBbFW5lQU5RJ/+8gcceACtqHBlOBgur"};
+const BLOB = {made: META.made};
+const TYPES = ["MNP공시","MNP선약","기변공시","기변선약","010공시","010선약","전체"];
+const CAPS = ["전체","기본","512G","1T"];
+const CARS = ["SK","KT","LG"];
+const LS = "admpw_" + META.salt.slice(0, 8);
+const $ = s => document.querySelector(s);
+const store = {get(k){try{return localStorage.getItem(k)}catch(e){return null}},
+               set(k,v){try{localStorage.setItem(k,v)}catch(e){}},
+               del(k){try{localStorage.removeItem(k)}catch(e){}}};
+const b64 = s => Uint8Array.from(atob(s), c => c.charCodeAt(0));
+
+let KEY = null, LIST = [], TK = null, CUR = "now";
+async function derive(pw){
+  const base = await crypto.subtle.importKey("raw", new TextEncoder().encode(pw), "PBKDF2", false, ["deriveKey"]);
+  return crypto.subtle.deriveKey({name:"PBKDF2", salt:b64(META.salt), iterations:META.iter, hash:"SHA-256"},
+                                 base, {name:"AES-GCM", length:256}, false, ["decrypt"]);
+}
+async function openBytes(u8){
+  const pt = await crypto.subtle.decrypt({name:"AES-GCM", iv:u8.slice(0,12)}, KEY, u8.slice(12));
+  return JSON.parse(new TextDecoder().decode(pt));
+}
+async function fetchBin(p){
+  const r = await fetch(p + "?v=" + encodeURIComponent(META.made), {cache:"no-store"});
+  if(!r.ok) throw new Error("불러오기 실패 " + p);
+  return new Uint8Array(await r.arrayBuffer());
+}
+/* ── 잠금 ── */
+let busy = false;
+async function tryPw(pw, silent){
+  busy = true; $("#lockmsg").style.color = "var(--muted)"; if(!silent) $("#lockmsg").textContent = "여는 중…";
+  try{
+    KEY = await derive(pw);
+    LIST = await openBytes(b64(META.list));                 // 비밀번호 확인
+    if($("#rem").checked) store.set(LS, pw); else store.del(LS);
+    const data = await openBytes(await fetchBin("c/now.bin"));
+    fillCha(); start(data);
+  }catch(e){
+    KEY = null; store.del(LS);
+    if(!silent){ $("#lockmsg").style.color = ""; $("#lockmsg").textContent = /불러오기/.test(e.message) ? e.message : "비밀번호가 맞지 않습니다."; }
+    else $("#lockmsg").textContent = "";
+  }
+  busy = false;
+}
+$("#pwf").addEventListener("submit", e => { e.preventDefault(); if(!busy && $("#pw").value) tryPw($("#pw").value); });
+if(!window.crypto || !crypto.subtle) $("#lockmsg").textContent = "이 브라우저에서는 열 수 없습니다. 사파리나 크롬으로 열어 주세요.";
+else { const saved = store.get(LS); if(saved) tryPw(saved, true); }
+function fillCha(){
+  const opts = [`<option value="now">지금 확정본 (${esc(META.made)} 올림)</option>`]
+    .concat(LIST.slice().reverse().map(x => `<option value="${esc(x.id)}">${esc(x.label)}</option>`));
+  $("#cha").innerHTML = opts.join(""); $("#cha").value = CUR;
+}
+$("#cha").addEventListener("change", async e => {
+  const id = e.target.value; $("#out").innerHTML = '<div class="empty">차수 불러오는 중…</div>';
+  try{ const data = await openBytes(await fetchBin("c/" + id + ".bin")); CUR = id; start(data); }
+  catch(err){ $("#out").innerHTML = `<div class="empty">${esc(err.message)}</div>`; e.target.value = CUR; }
+});
+
+/* ── 검색 ── */
+let D, st = {q:"S942N", type:"MNP공시", cap:"전체", car:"전체", tab:"단가", tq:"", dl:"전체", plan:{}, pcar:"SK", pq:"",
+             ch:"단가표", mg:{P:"", A:"", S:"", T:"", sub:"유치"}, tkm:"", tkbad:true};
+let popen = false;   // 요금제 판 펼침 (저장 안 함 — 다시 열면 접힌 상태)
+const TABS_M = [["마진","마진 계산"],["텔킷","텔킷 점검"]];
+const TABS = [["단가","단가"],["요금제","요금제별"],["추지","추가지원금"],["부가","부가서비스"],["중고","중고"],["텍스트","텍스트정책"],["히든","히든"]];
+const PH = "모델명 (S942N·942·175) 또는 S26";
+function start(data){
+  D = data;
+  $("#hot").innerHTML = '<span class="seglabel">주요</span>'; $("#caps").innerHTML = '<span class="seglabel">용량</span>';
+  $("#pcars").innerHTML = '<span class="seglabel">요금제</span>'; $("#sub").dataset.f = "";
+  D.rows = D.rows.map(r => ({c:r[0], dl:r[1], code:r[2], cap:r[3], pet:r[4], type:r[5], face:r[6], hid:r[7], hd:r[8], add:r[9], tot:r[10], v:r[11], req:(r.length > 12 ? r[12] : -1), raw13:(r.length > 13 ? r[13] : 0),
+                             s:(r[2]+" "+r[4]+" "+r[11]).toLowerCase()}));
+  D.groupOf = Object.fromEntries(D.models.map(m => [m[0], m[1]]));
+  D.petOf = Object.fromEntries(D.models.map(m => [m[0], m[2] || ""]));
+  D.models = D.models.map(m => m[0]);
+  D.modelSet = new Set(D.rows.map(r => r.v));   // 완전일치 = 세부모델(용량 제외) 이름
+  try{ const p = JSON.parse(sessionStorage.getItem("admst")||"null"); if(p) st = Object.assign(st, p); }catch(e){}
+  for(const [k,id] of [["P","m_free"],["A","m_add"],["S","m_sun"],["T","m_dae"]]) $("#"+id).value = st.mg[k] || "";
+  $("#m_sub").value = st.mg.sub || "유치";
+  $("#basis").innerHTML = (D.상태 === "초안" ? "<em>초안</em><br>" : "") + esc(D.기준.replace(/^\d{4}년 /,"").replace(" 기준",""));
+  D.fams = D.fams || [];
+  $("#hot").hidden = !D.fams.length;
+  $("#hot").insertAdjacentHTML("beforeend", D.fams.map((f,i) => `<button data-f="${i}">${esc(f.name)}<small>${esc(f.hint)}</small></button>`).join(""));
+  try{ const k = localStorage.getItem("pccar"); if(k) st.car = k; }catch(e){}
+  $("#cars").innerHTML = ["전체", ...CARS].map(k => `<button data-k="${k}">${k}</button>`).join("");
+  $("#types").innerHTML = TYPES.map(t => `<button data-t="${t}">${t}</button>`).join("");
+  $("#caps").insertAdjacentHTML("beforeend", CAPS.map(c => `<button data-c="${c}">${c}</button>`).join(""));
+  D.txt = D.txt || {};
+  const PL = D.plan;
+  if(PL){
+    PL.pn = PL.plans.map(p => p[0].toLowerCase().replace(/\s+/g,""));
+    for(const r of D.rows) r.pv = r.raw13 || 0;
+    for(const c of CARS) if(st.plan[c] == null || !PL.plans[st.plan[c]] || PL.plans[st.plan[c]][1] !== c)
+      st.plan[c] = (PL.top[c] || [])[0] ?? PL.plans.findIndex(p => p[1] === c);
+    $("#pcars").insertAdjacentHTML("beforeend", CARS.map(c => `<button data-pc="${c}">${c}</button>`).join(""));
+  }
+  buildTabs();
+  for(const k in D.txt) D.txt[k].forEach(e => e.s = [e.dl, e.t, (e.tags||[]).join(" "), (e.lines||[]).join(" "), e.amt, e.body,
+                                                       (e.kv||[]).map(x => x.join(" ")).join(" ")].join(" ").toLowerCase());
+  $("#q").value = isPriceTab() ? st.q : st.tq;
+  $("#lock").hidden = true; $("#app").hidden = false;
+  render();
+}
+const esc = s => String(s).replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const fmt = v => (Math.round(v*10)/10).toString();
+function save(){ try{ sessionStorage.setItem("admst", JSON.stringify(st)); }catch(e){} }
+function buildTabs(){
+  const PL = D.plan;
+  const tabs = st.ch === "마진" ? TABS_M
+    : TABS.filter(([k]) => k === "단가" || (k === "요금제" ? !!PL : (D.txt[k] || []).length));
+  if(!tabs.some(([k]) => k === st.tab)) st.tab = tabs[0][0];
+  $("#tabs").hidden = false;
+  $("#tabs").innerHTML = tabs.map(([k,l]) => `<button role="tab" data-tab="${k}">${l}${D.txt[k] ? `<small>${D.txt[k].length}</small>` : ""}</button>`).join("");
+  document.querySelectorAll("#chap [data-ch]").forEach(b => b.setAttribute("aria-pressed", b.dataset.ch === st.ch));
+}
+/* ── 마진 계산 (대표 2026-10-25) ── */
+const num = v => { const x = parseFloat(String(v||"").replace(/,/g,"")); return isFinite(x) && x > 0 ? x : 0; };
+function marginOf(r){
+  const g = st.mg, A = num(g.A), P = Math.max(num(g.P), A);
+  let T = r.tot, ns = 0;
+  if(g.sub === "미유치" && r.add > 0){ ns = (D.nonsub || {})[r.c + "|" + r.dl] || 0; T = T - r.add + ns; }
+  const base = r.c === "LG" ? T - P : T - A;
+  const vat = 0.15 * Math.max(0, base);
+  return {m: T - vat - P + num(g.S) - num(g.T) - 4, T, base, vat, P, A, ns};
+}
+function marginResults(f){
+  const exact = D.modelSet.has(st.q.trim()), g = st.mg; let html = "";
+  for(const c of CARS.filter(c => st.car === "전체" || st.car === c)){
+    const best = new Map();
+    for(const r of D.rows){ if(r.c !== c || !f(r)) continue;
+      const x = marginOf(r), b = best.get(r.dl); if(!b || x.m > b.x.m) best.set(r.dl, {r, x}); }
+    const rs = [...best.values()].sort((a,b) => b.x.m - a.x.m);
+    html += `<section class="car" data-c="${c}"><h2><i>${c}</i>${rs.length ? `<small>${rs.length}곳 · 마진 높은 순</small>` : ""}</h2><div class="list">`;
+    if(!rs.length) html += `<div class="empty">이 조건에 맞는 ${c} 정책이 없습니다.</div>`;
+    rs.forEach(({r, x}, i) => {
+      const tags = [];
+      if(!exact) tags.push(esc(r.v) + (D.petOf[r.v] ? " " + esc(D.petOf[r.v]) : ""));
+      else if(r.cap !== "기본") tags.push(r.cap);
+      if(st.type === "전체") tags.push(r.type);
+      const parts = [`합계 <b>${fmt(x.T)}</b>`, `과세 <b>${fmt(x.base)}</b>`, `부가세 <b>−${fmt(x.vat)}</b>`];
+      if(x.P) parts.push(`프리 <b>−${fmt(x.P)}</b>` + (x.A ? ` (추지 ${fmt(x.A)})` : ""));
+      if(num(g.S)) parts.push(`선납 <b>+${fmt(num(g.S))}</b>`);
+      if(num(g.T)) parts.push(`대납 <b>−${fmt(num(g.T))}</b>`);
+      parts.push(`수수료 <b>−4</b>`);
+      html += `<div class="row${i===0?" first":""}"><div class="rk">${i+1}</div>
+        <div class="dl">${esc(r.dl)}</div><div class="tot"><span class="mg${x.m < 0 ? " neg" : ""}">${fmt(x.m)}</span><small>만</small></div>
+        <div class="parts">${parts.join(" · ")}</div>
+        <div class="meta">${tags.length ? tags.join(" · ") + " — " : ""}공지 합계 ${fmt(r.tot)} (액면 ${fmt(r.face)} · 히든 ${fmt(r.hid)} · 부가 ${fmt(r.add)})${x.ns ? ` · 미유치 ${fmt(r.add)}→${fmt(x.ns)}` : ""}</div>
+        ${r.req >= 0 && D.reqs ? `<div class="req">⚠ ${esc(D.reqs[r.req])}</div>` : ""}
+      </div>`;
+    });
+    html += `</div></section>`;
+  }
+  return html;
+}
+/* ── 텔킷 점검 ── */
+const man = w => fmt((w || 0) / 10000);
+async function renderTk(){
+  $("#tkctl").hidden = false; $("#pricectl").hidden = true; $("#mctl").hidden = true; $("#planctl").hidden = true; $("#dls").hidden = true;
+  if(!TK){
+    $("#out").innerHTML = '<div class="empty">텔킷 자료 불러오는 중…</div>';
+    try{ TK = await openBytes(await fetchBin("tk.bin")); }catch(e){ $("#out").innerHTML = `<div class="empty">${esc(e.message)}</div>`; return; }
+  }
+  const months = [...new Set(TK.rows.map(r => r[0].slice(0,7)))].sort().reverse();
+  if(!months.includes(st.tkm)) st.tkm = months[0] || "";
+  $("#tkctl").innerHTML = `<select id="tkm">${months.map(m => `<option${m === st.tkm ? " selected" : ""}>${m}</option>`).join("")}</select>
+    <label><input type="checkbox" id="tkbad"${st.tkbad ? " checked" : ""}> 부가세가 규칙과 다른 건만</label>`;
+  const rows = TK.rows.filter(r => r[0].startsWith(st.tkm) && (st.car === "전체" || r[2].startsWith(st.car)));
+  const bad = r => Math.abs(r[10] - r[11]) >= 1000;
+  const sum = {};
+  for(const r of rows){ const c = r[2].split("_")[0]; const s = sum[c] = sum[c] || {n:0, b:0, d:0, p:0};
+    s.n++; if(bad(r)){ s.b++; s.d += r[10] - r[11]; } s.p += r[12] - r[13]; }
+  let html = `<div class="tksum">${Object.entries(sum).map(([c,s]) => `<div><b>${c}</b> ${s.n}건 · 부가세 규칙과 다름 <b>${s.b}</b>건 (텔킷 − 규칙 합 ${man(s.d)}만) · 예상손익 차이 합 ${man(s.p)}만</div>`).join("") || "자료 없음"}
+    <div style="color:var(--muted);font-size:12px;margin-top:4px">규칙: 과세 = 리베이트 + 수수료 4만 − 추가지원금(관리번호, SK·KT) / − 프리할부(LG) · 15% · 예상손익 = 리베이트 − 프리 − 부가세 − 할인합계 + 선납금 · ${esc(TK.made)} 기준</div></div>`;
+  const list = rows.filter(r => !st.tkbad || bad(r)).slice(-300).reverse();
+  html += '<div class="tcards">' + list.map(r => `<div class="tk"><div class="t1">${esc(r[2])} ${esc(r[3])}<span>${esc(r[0])} · ${esc(r[1])} · ${esc(r[4])}</span></div>
+    <div class="t2">리베이트 ${man(r[5])} · 프리 ${man(r[6])}${r[7] ? ` (추지 ${man(r[7])})` : ""} · 선납 ${man(r[8])} · 할인 ${man(r[9])}${r[14] ? "" : " · 수수료 표기 없음"}</div>
+    <div class="t3"><span>부가세</span><b class="${bad(r) ? "bad" : ""}">텔킷 ${man(r[10])} / 규칙 ${man(r[11])}${bad(r) ? ` (${r[10] > r[11] ? "+" : ""}${man(r[10] - r[11])})` : ""}</b>
+    <span>예상손익</span><b>텔킷 ${man(r[12])} / 규칙 ${man(r[13])}</b></div></div>`).join("") + '</div>';
+  html += `<div class="foot"><span>단위 만원 · 최근 300건까지</span><button id="lockbtn">잠그기</button></div>`;
+  $("#out").innerHTML = html;
+  $("#tkm").onchange = e => { st.tkm = e.target.value; save(); renderTk(); };
+  $("#tkbad").onchange = e => { st.tkbad = e.target.checked; save(); renderTk(); };
+}
+
+function matchFn(){
+  const q = st.q.trim(); if(!q) return null;
+  const exact = D.modelSet.has(q), ql = q.toLowerCase();
+  return r => (exact ? r.v === q : r.s.includes(ql))
+           && (st.cap === "전체" || r.cap === st.cap)
+           && (st.type === "전체" || r.type === st.type);
+}
+function suggestions(){
+  const q = st.q.trim().toLowerCase();
+  const list = q ? D.models.filter(m => m.toLowerCase().includes(q) ||
+                      D.rows.some(r => r.v === m && r.code.toLowerCase().includes(q))) : D.models;
+  if(q && list.length === 1 && list[0] === st.q.trim()) return "";
+  if(q && !list.length) return "";
+  const groups = q ? [["비슷한 모델", list.slice(0,16)]] :
+    ["갤럭시","아이폰","기타"].map(g => [g, list.filter(m => D.groupOf[m] === g)]);
+  return groups.filter(g=>g[1].length).map(([h,ms]) =>
+    `<section class="sug"><h2>${h}</h2><div class="chips">${ms.map(m=>`<button class="chip" data-m="${esc(m)}">${esc(m)}${D.petOf[m] ? `<small>${esc(D.petOf[m])}</small>` : ""}</button>`).join("")}</div></section>`).join("");
+}
+/* ── 글로 된 정책 탭 ── */
+function hl(s, toks){
+  const ts = toks.filter(t => t.length >= 2).map(t => t.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
+  if(!ts.length) return esc(s);
+  return String(s).split(new RegExp(`(${ts.join("|")})`, "gi")).map((p,i) => i % 2 ? `<mark>${esc(p)}</mark>` : esc(p)).join("");
+}
+function renderTxt(){
+  const all = D.txt[st.tab] || [];
+  const toks = st.tq.trim().toLowerCase().split(/\s+/).filter(Boolean);
+  const inCar = all.filter(e => st.car === "전체" || e.c === st.car);
+  const dls = [...new Set(inCar.map(e => e.dl))];
+  if(st.dl !== "전체" && !dls.includes(st.dl)) st.dl = "전체";
+  $("#dls").innerHTML = '<span class="seglabel">거래처</span>' + ["전체", ...dls].map(d => `<button data-dl="${esc(d)}" aria-pressed="${d === st.dl}">${esc(d)}</button>`).join("");
+  $("#dls").hidden = dls.length < 2;
+  const list = inCar.filter(e => (st.dl === "전체" || e.dl === st.dl) && toks.every(t => e.s.includes(t)));
+  let html = "", lastC = "";
+  if(!list.length) html = `<div class="empty">${toks.length ? "검색어에 맞는 정책이 없습니다." : "이 조건에 해당하는 정책이 없습니다."}</div>`;
+  html += '<div class="tcards">';
+  for(const e of list){
+    if(e.c !== lastC && st.car === "전체"){ html += `<div class="cgrp" data-c="${e.c}"><i>${e.c}</i></div>`; lastC = e.c; }
+    const tags = (e.tags||[]).filter(Boolean).map(t => `<span class="tg${/주의|제한/.test(t) ? " w" : ""}">${esc(t)}</span>`).join("");
+    const body = e.body ? (e.body.length > 110 && !toks.length
+        ? `<div class="bd clamp">${hl(e.body, toks)}</div><button class="more">더 보기</button>`
+        : `<div class="bd">${hl(e.body, toks)}</div>`) : "";
+    const kv = (e.kv||[]).length ? `<div class="kv">${e.kv.map(([n,v,s]) => `<span>${hl(n,toks)}</span><b>${esc(v)}</b>${s ? `<small>${esc(s)}</small>` : ""}`).join("")}</div>` : "";
+    html += `<article class="tc"><div class="hd1"><span class="dl2">${hl(e.dl,toks)}</span>${tags}${e.amt ? `<span class="am${/^[+-]?[\d.]+$/.test(e.amt) ? "" : " tx"}">${esc(e.amt)}</span>` : ""}</div>
+      ${e.t && e.t !== "부가서비스" ? `<div class="tt">${hl(e.t,toks)}</div>` : ""}${(e.lines||[]).map(l => `<div class="ln">${hl(l,toks)}</div>`).join("")}${kv}${body}</article>`;
+  }
+  html += '</div>' + `<div class="foot"><span>${list.length}건 · 원문 기준 · ${esc(BLOB.made)} 생성</span><button id="lockbtn">잠그기</button></div>`;
+  $("#out").innerHTML = html;
+}
+function isPriceTab(){ return st.tab === "단가" || st.tab === "요금제" || st.tab === "마진"; }
+/* ── 요금제별: 고른 요금제 → 거래처마다 그 요금제의 구간 → 원장 칸이 있는 곳만 숫자 ── */
+function bandOf(c, dl, pi){
+  const PL = D.plan, o = PL.over[dl + "|" + c];
+  const b = (o && Object.prototype.hasOwnProperty.call(o, pi)) ? o[pi] : PL.plans[pi][2];
+  return b;
+}
+function renderPlanCtl(){
+  const PL = D.plan; if(st.car !== "전체") st.pcar = st.car;
+  document.querySelectorAll("#pcars button").forEach(b => { b.setAttribute("aria-pressed", b.dataset.pc === st.pcar); b.hidden = st.car !== "전체" && b.dataset.pc !== st.car; });
+  const c = st.pcar, q = st.pq.trim().toLowerCase().replace(/\s+/g,"");
+  let ids = q ? PL.plans.map((p,i) => i).filter(i => PL.plans[i][1] === c && PL.pn[i].includes(q)).slice(0,30)
+              : (PL.top[c] || []).slice();
+  if(!q && !ids.includes(st.plan[c])) ids.unshift(st.plan[c]);
+  $("#plist").innerHTML = ids.length ? ids.map(i => `<button data-pi="${i}" aria-pressed="${i === st.plan[c]}">${esc(PL.plans[i][0])}<small>${esc(PL.plans[i][2])}</small></button>`).join("")
+                                     : `<span class="pnote">이 이름의 ${c} 요금제가 표에 없습니다.</span>`;
+  const sel = CARS.filter(k => st.car === "전체" || st.car === k);
+  $("#pnowbar").innerHTML = '<span class="seglabel">요금제</span> ' + sel.map(k => `${k} <b>${esc(PL.plans[st.plan[k]][0])}</b><small>${esc(PL.plans[st.plan[k]][2])}</small>`).join(" · ");
+  $("#pbody").hidden = !popen; $("#pbar").setAttribute("aria-expanded", popen); $("#ptg").textContent = popen ? "접기 ▴" : "바꾸기 ▾";
+  $("#pnow").innerHTML = CARS.filter(k => st.car === "전체" || st.car === k).map(k => `${k} <b>${esc(PL.plans[st.plan[k]][0])}</b>`).join(" · ") +
+    (q ? "" : ` <span>· 대표 요금제 = 최근 60일 개통 많은 순</span>`);
+}
+function planResults(f){
+  const PL = D.plan, exact = D.modelSet.has(st.q.trim()); let html = "";
+  for(const c of CARS.filter(c => st.car === "전체" || st.car === c)){
+    const pi = st.plan[c], P0 = PL.plans[pi], bl = PL.bands[c];
+    const best = new Map(), prep = new Map();
+    for(const r of D.rows){ if(r.c !== c || !f(r)) continue;
+      const b = bandOf(c, r.dl, pi), bi = bl.indexOf(b);
+      const v = (bi >= 0 && r.pv) ? r.pv[bi] : 0;
+      if(!v){ if(!best.has(r.dl)) prep.set(r.dl, b); continue; }
+      const tot = v[0] + v[1] + v[2], x = best.get(r.dl);
+      if(!x || tot > x.tot) best.set(r.dl, {r, b, face:v[0], hid:v[1], add:v[2], hd:PL.hds[v[3]] || "", tot});
+    }
+    for(const k of best.keys()) prep.delete(k);
+    const rs = [...best.values()].sort((a,b) => b.tot - a.tot);
+    html += `<section class="car" data-c="${c}"><h2><i>${c}</i>${esc(P0[0])}<small>${P0[2]}${rs.length ? ` · ${rs.length}곳` : ""}</small></h2><div class="list">`;
+    if(!rs.length && !prep.size) html += `<div class="empty">이 조건에 맞는 ${c} 정책이 없습니다.</div>`;
+    rs.forEach((x,i) => {
+      const r = x.r, tags = [];
+      if(!exact) tags.push(esc(r.v) + (D.petOf[r.v] ? " " + esc(D.petOf[r.v]) : ""));
+      else if(r.cap !== "기본") tags.push(r.cap);
+      if(st.type === "전체") tags.push(r.type);
+      html += `<div class="row${i===0?" first":""}"><div class="rk">${i+1}</div>
+        <div class="dl">${esc(r.dl)}<span class="band">${esc(x.b)} 칸</span></div><div class="tot">${fmt(x.tot)}<small>만</small></div>
+        <div class="parts">액면 <b>${fmt(x.face)}</b> · 히든 <b>${fmt(x.hid)}</b> · 부가 <b>${fmt(x.add)}</b></div>
+        ${(tags.length || x.hd) ? `<div class="meta">${tags.length ? tags.join(" · ") + (x.hd ? " — " : "") : ""}${x.hd ? `<span class="hd">${esc(x.hd)}</span>` : ""}</div>` : ""}
+        ${r.req >= 0 && D.reqs ? `<div class="req">⚠ ${esc(D.reqs[r.req])}</div>` : ""}
+      </div>`;
+    });
+    if(prep.size) html += `<div class="prep">준비 중 · <b>${[...prep.keys()].map(esc).join(" · ")}</b> — 이 요금제 구간이 원장과 아직 대조되지 않았습니다. 거래처에 문의해 주세요.</div>`;
+    html += `</div></section>`;
+  }
+  return html + `<p class="pnote">요금제별 단가는 공지 단가와 같은 계산(액면+히든+부가)을 그 요금제 구간 칸에 적용한 값입니다. 공지 단가와 다를 수 있습니다.</p>`;
+}
+function render(){
+  buildTabs();
+  $("#mctl").hidden = st.tab !== "마진"; $("#tkctl").hidden = st.tab !== "텔킷";
+  if(st.tab === "텔킷"){ document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === st.tab));
+    document.querySelectorAll("#cars button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === st.car)); renderTk(); return; }
+  document.querySelectorAll("#tabs button").forEach(b => b.setAttribute("aria-selected", b.dataset.tab === st.tab));
+  document.querySelectorAll("#cars button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === st.car));
+  const isP = isPriceTab();
+  $("#pricectl").hidden = !isP; if(isP) $("#dls").hidden = true;
+  $("#planctl").hidden = st.tab !== "요금제"; if(st.tab === "요금제") renderPlanCtl();
+  document.body.classList.toggle("plantab", st.tab === "요금제");
+  $("#q").placeholder = isP ? PH : "단어로 찾기 (거래처·모델·USIM 등)";
+  if(!isP){ renderTxt(); return; }
+  const q0 = st.q.trim();
+  const fi = D.fams.findIndex(f => f.members.some(m => m[0] === q0));
+  document.querySelectorAll("#hot button").forEach(b => b.setAttribute("aria-pressed", +b.dataset.f === fi));
+  const sub = $("#sub");
+  if(fi >= 0 && D.fams[fi].members.length > 1){
+    if(sub.dataset.f !== String(fi)){
+      sub.innerHTML = D.fams[fi].members.map(m => `<button data-m="${esc(m[0])}">${esc(m[0])}<small>${esc(m[1])}</small></button>`).join("");
+      sub.dataset.f = fi;
+    }
+    sub.querySelectorAll("button").forEach(b => b.setAttribute("aria-pressed", b.dataset.m === q0));
+    sub.hidden = false;
+  } else { sub.hidden = true; sub.dataset.f = ""; }
+  document.querySelectorAll("#cars button").forEach(b => b.setAttribute("aria-pressed", b.dataset.k === st.car));
+  document.querySelectorAll("#types button").forEach(b => b.setAttribute("aria-pressed", b.dataset.t === st.type));
+  document.querySelectorAll("#caps button").forEach(b => b.setAttribute("aria-pressed", b.dataset.c === st.cap));
+  const f = matchFn(); let html = "";
+  if(f && st.tab === "요금제"){ html = planResults(f); }
+  else if(f && st.tab === "마진"){ html = marginResults(f); }
+  else if(f){
+    const exact = D.modelSet.has(st.q.trim());
+    for(const c of CARS.filter(c => st.car === "전체" || st.car === c)){
+      const best = new Map();
+      for(const r of D.rows){ if(r.c !== c || !f(r)) continue;
+        const b = best.get(r.dl); if(!b || r.tot > b.tot) best.set(r.dl, r); }
+      const rs = [...best.values()].sort((a,b) => b.tot - a.tot);
+      html += `<section class="car" data-c="${c}"><h2><i>${c}</i>${rs.length ? `<small>${rs.length}곳 · 합계 높은 순</small>` : ""}</h2><div class="list">`;
+      if(!rs.length){
+        // 고른 용량(512G·1T)이 이 통신사 원장엔 따로 없고 기본 용량만 있는 경우
+        const hasBase = st.cap !== "전체" && st.cap !== "기본" &&
+                        D.rows.some(r => r.c === c && r.cap === "기본" && (exact ? r.v === st.q.trim() : r.s.includes(st.q.trim().toLowerCase())));
+        html += hasBase
+          ? `<div class="empty">${c}는 ${st.cap} 단가가 따로 없습니다. <button class="chip" data-c2="기본">기본 용량 단가 보기</button></div>`
+          : `<div class="empty">이 조건에 맞는 ${c} 정책이 없습니다.</div>`;
+      }
+      rs.forEach((r,i) => {
+        const tags = [];
+        if(!exact) tags.push(esc(r.v) + (D.petOf[r.v] ? " " + esc(D.petOf[r.v]) : ""));
+        else if(r.cap !== "기본") tags.push(r.cap);
+        if(st.type === "전체") tags.push(r.type);
+        html += `<div class="row${i===0?" first":""}"><div class="rk">${i+1}</div>
+          <div class="dl">${esc(r.dl)}</div><div class="tot">${fmt(r.tot)}<small>만</small></div>
+          <div class="parts">액면 <b>${fmt(r.face)}</b> · 히든 <b>${fmt(r.hid)}</b> · 부가 <b>${fmt(r.add)}</b></div>
+          ${(tags.length || r.hd) ? `<div class="meta">${tags.length ? tags.join(" · ") + (r.hd ? " — " : "") : ""}${r.hd ? `<span class="hd">${esc(r.hd)}</span>` : ""}</div>` : ""}
+          ${r.req >= 0 && D.reqs ? `<div class="req">⚠ ${esc(D.reqs[r.req])}</div>` : ""}
+        </div>`;
+      });
+      html += `</div></section>`;
+    }
+  }
+  const sg = suggestions();
+  html = (f ? html + (sg ? sg : "") : sg) +
+    `<div class="foot"><span>단위 만원 · ${esc(BLOB.made)} 생성</span><button id="lockbtn">잠그기</button></div>`;
+  $("#out").innerHTML = html;
+}
+document.addEventListener("click", e => {
+  const mb = e.target.closest(".tc .more");
+  if(mb){ const bd = mb.previousElementSibling; const open = bd.classList.toggle("clamp"); mb.textContent = open ? "더 보기" : "접기"; return; }
+  const t = e.target.closest("[data-t]"), c = e.target.closest("#caps [data-c]"), m = e.target.closest("[data-m]"),
+        fb = e.target.closest("#hot [data-f]");
+  const c2 = e.target.closest("[data-c2]");
+  const kb = e.target.closest("#cars [data-k]");
+  const tb = e.target.closest("#tabs [data-tab]"), db = e.target.closest("#dls [data-dl]"), chb = e.target.closest("#chap [data-ch]");
+  if(chb){ st.ch = chb.dataset.ch; st.tab = st.ch === "마진" ? "마진" : "단가"; $("#q").value = st.q; save(); render(); return; }
+  const pc = e.target.closest("#pcars [data-pc]"), pb = e.target.closest("#plist [data-pi]"), pbar = e.target.closest("#pbar");
+  if(pbar){ popen = !popen; if(!popen){ st.pq = ""; $("#pq").value = ""; } }
+  else if(pc){ st.pcar = pc.dataset.pc; st.pq = ""; $("#pq").value = ""; }
+  else if(pb){ st.plan[st.pcar] = +pb.dataset.pi; st.pq = ""; $("#pq").value = ""; $("#pq").blur(); popen = false;
+              requestAnimationFrame(() => { const o = $("#out"); if(o) window.scrollTo({top: o.offsetTop - 8}); }); }
+  else if(tb){ st.tab = tb.dataset.tab; $("#q").value = isPriceTab() ? st.q : st.tq; window.scrollTo({top:0}); }
+  else if(db){ st.dl = db.dataset.dl; }
+  else if(kb){ st.car = kb.dataset.k; try{ localStorage.setItem("pccar", st.car); }catch(err){} }
+  else if(c2){ st.cap = c2.dataset.c2; }
+  else if(fb){ st.q = D.fams[+fb.dataset.f].members[0][0]; $("#q").value = st.q; $("#q").blur(); window.scrollTo({top:0}); }
+  else if(t){ st.type = t.dataset.t; } else if(c){ st.cap = c.dataset.c; }
+  else if(m){ st.q = m.dataset.m; $("#q").value = st.q; $("#q").blur(); window.scrollTo({top:0}); }
+  else if(e.target.id === "clr"){ if(isPriceTab()) st.q = ""; else st.tq = ""; $("#q").value = ""; $("#q").focus(); }
+  else if(e.target.id === "lockbtn"){ store.del(LS); location.reload(); return; }
+  else return;
+  save(); render();
+});
+for(const [k,id] of [["P","m_free"],["A","m_add"],["S","m_sun"],["T","m_dae"]])
+  $("#"+id).addEventListener("input", e => { st.mg[k] = e.target.value; save(); render(); });
+$("#m_sub").addEventListener("change", e => { st.mg.sub = e.target.value; save(); render(); });
+$("#pq").addEventListener("input", e => { st.pq = e.target.value; renderPlanCtl(); });
+$("#q").addEventListener("input", e => { if(isPriceTab()) st.q = e.target.value; else st.tq = e.target.value; save(); render(); });
+</script>
