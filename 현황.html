@@ -1,0 +1,127 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="claude:viewport-fit-sides" content="cover">
+<title>에이전트 사무실</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Gothic+A1:wght@700;800&family=IBM+Plex+Sans+KR:wght@400;600;700&family=IBM+Plex+Mono:wght@400;600&display=swap">
+
+<style>
+/* 레이아웃: 방(기계실·단가·정산)별로 자리를 늘어놓은 한 층짜리 사무실 평면도 */
+:root{
+  --바탕:#eef1f4; --자리:#ffffff; --선:#d3dae1; --글:#1b2733; --흐림:#5d6b7a;
+  --잉크:#24506b;
+  --일함:#1f7a4d; --있음:#4b6b86; --조용:#9a6a12; --결근:#b23b2e; --아직:#8a93a0;
+  --일함바탕:#e4f3ea; --있음바탕:#e7eef4; --조용바탕:#fbf0d8; --결근바탕:#fae6e3; --아직바탕:#eceff2;
+}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){
+  --바탕:#141a20; --자리:#1c242c; --선:#2c3845; --글:#e4eaf0; --흐림:#94a3b2;
+  --잉크:#7fb4d6;
+  --일함:#5fd0a0; --있음:#9fb9d0; --조용:#e0b355; --결근:#f08b7d; --아직:#737f8c;
+  --일함바탕:#16302a; --있음바탕:#1d2832; --조용바탕:#33290f; --결근바탕:#3a211d; --아직바탕:#1f262d;
+  color-scheme:dark}}
+:root[data-theme="dark"]{
+  --바탕:#141a20; --자리:#1c242c; --선:#2c3845; --글:#e4eaf0; --흐림:#94a3b2;
+  --잉크:#7fb4d6;
+  --일함:#5fd0a0; --있음:#9fb9d0; --조용:#e0b355; --결근:#f08b7d; --아직:#737f8c;
+  --일함바탕:#16302a; --있음바탕:#1d2832; --조용바탕:#33290f; --결근바탕:#3a211d; --아직바탕:#1f262d;
+  color-scheme:dark}
+
+body{background:var(--바탕);color:var(--글);
+  font-family:'IBM Plex Sans KR','Apple SD Gothic Neo','Malgun Gothic',system-ui,sans-serif;
+  line-height:1.5;font-size:15px}
+.감{padding-left:max(16px,env(safe-area-inset-left,0px));
+   padding-right:max(16px,env(safe-area-inset-right,0px));
+   max-width:1040px;margin:0 auto;padding-block:20px 48px}
+h1{font-family:'Gothic A1','IBM Plex Sans KR',sans-serif;font-weight:800;
+   font-size:clamp(22px,5vw,30px);margin:0;letter-spacing:-.02em;text-wrap:balance}
+.머리{display:flex;flex-wrap:wrap;align-items:baseline;gap:8px 14px;margin-bottom:6px}
+.기준{font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:13px;color:var(--흐림);
+  font-variant-numeric:tabular-nums}
+.경고{margin:14px 0 0;padding:11px 14px;border-radius:9px;background:var(--결근바탕);
+  color:var(--결근);border:1px solid color-mix(in srgb,var(--결근) 35%,transparent);font-weight:600}
+.셈{display:flex;flex-wrap:wrap;gap:7px;margin:16px 0 26px}
+.셈 span{font-size:13px;padding:5px 11px;border-radius:99px;border:1px solid var(--선);
+  background:var(--자리);font-weight:600}
+.셈 b{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums}
+
+h2{font-family:'Gothic A1','IBM Plex Sans KR',sans-serif;font-weight:700;font-size:13px;
+  letter-spacing:.14em;color:var(--흐림);margin:30px 0 11px;text-transform:uppercase}
+.층{display:grid;grid-template-columns:repeat(auto-fill,minmax(248px,1fr));gap:11px}
+.책상{background:var(--자리);border:1px solid var(--선);border-radius:11px;
+  padding:13px 14px 12px 17px;position:relative;overflow:hidden;min-width:0}
+.책상::before{content:"";position:absolute;inset:0 auto 0 0;width:4px;background:var(--띠)}
+.이름줄{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.이름{font-family:'Gothic A1','IBM Plex Sans KR',sans-serif;font-weight:700;font-size:16px}
+.딱지{font-size:11px;font-weight:700;padding:2.5px 8px;border-radius:99px;
+  background:var(--띠바탕);color:var(--띠);white-space:nowrap}
+.역할{color:var(--흐림);font-size:12.5px;margin-top:2px}
+.한일{margin-top:9px;padding-top:9px;border-top:1px dashed var(--선);font-size:13px;min-width:0}
+.한일 .무엇{display:block;color:var(--흐림);font-size:11.5px;margin-bottom:2px}
+.한일 .파일{display:block;font-family:'IBM Plex Mono',monospace;font-size:11.5px;
+  color:var(--잉크);word-break:break-all}
+.때{font-family:'IBM Plex Mono',monospace;font-variant-numeric:tabular-nums;font-weight:600}
+.덧{margin-top:7px;font-size:12.5px;color:var(--잉크);font-weight:600}
+.출근표{margin-top:7px;font-size:11.5px;color:var(--흐림)}
+footer{margin-top:34px;padding-top:14px;border-top:1px solid var(--선);
+  font-size:12px;color:var(--흐림)}
+footer p{margin:0 0 5px}
+</style>
+
+</head>
+<body style="margin:0">
+<div class="감">
+<div class="머리"><h1>에이전트 사무실</h1><span class="기준">11월 18일 14:12 기준</span></div>
+<p style="margin:0;color:var(--흐림);font-size:13px">자리마다 <b>마지막으로 남긴 기록</b>을 읽어 그립니다 — 기록이 없으면 빈 자리입니다.</p>
+<p class="경고">⚠ 정책봇이 기록 없음부터 조용합니다 — 명령을 눌러도 받을 쪽이 없을 수 있습니다. 봇시작.bat 으로 다시 켜 주세요.</p>
+<div class="셈"><span style="color:var(--결근)">결근 <b>1</b></span><span style="color:var(--조용)">조용함 <b>1</b></span><span style="color:var(--일함)">일하는 중 <b>2</b></span><span style="color:var(--있음)">자리에 있음 <b>6</b></span><span style="color:var(--아직)">출근 전 <b>1</b></span></div>
+<h2>기계실 — 혼자 도는 것들</h2><div class="층">
+<div class="책상" style="--띠:var(--결근);--띠바탕:var(--결근바탕)"><div class="이름줄"><span class="이름">정책봇</span><span class="딱지">비었음</span></div><div class="역할">명령 받기 · 작업 돌리기</div>
+<div class="한일"><span class="무엇">생존 기록이 없습니다 — 봇활동.py 가 낡았거나 봇이 꺼져 있습니다</span></div>
+</div>
+<div class="책상" style="--띠:var(--일함);--띠바탕:var(--일함바탕)"><div class="이름줄"><span class="이름">카톡 감시</span><span class="딱지">일하는 중</span></div><div class="역할">거래처 정책방 지켜보기</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">상태.json</span><span class="때">11/18 14:10 · 2분 전</span></div>
+</div>
+<div class="책상" style="--띠:var(--있음);--띠바탕:var(--있음바탕)"><div class="이름줄"><span class="이름">텔킷 수집</span><span class="딱지">자리에 있음</span></div><div class="역할">개통내역 받아오기</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">실적누적.db</span><span class="때">11/18 12:25 · 1시간 47분 전</span></div>
+<div class="출근표">출근 10:00</div>
+</div>
+<div class="책상" style="--띠:var(--있음);--띠바탕:var(--있음바탕)"><div class="이름줄"><span class="이름">자기점검</span><span class="딱지">자리에 있음</span></div><div class="역할">아침마다 전체 점검</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">실행로그.txt</span><span class="때">11/18 09:00 · 5시간 11분 전</span></div>
+<div class="출근표">출근 09:30</div>
+</div>
+</div>
+<h2>단가 — 공지를 만든다</h2><div class="층">
+<div class="책상" style="--띠:var(--있음);--띠바탕:var(--있음바탕)"><div class="이름줄"><span class="이름">명령자</span><span class="딱지">자리에 있음</span></div><div class="역할">히든 판정 · 규칙 확정</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">조정규칙.csv</span><span class="때">11/18 13:18 · 53분 전</span></div>
+<div class="덧">켜진 규칙 55개</div>
+</div>
+<div class="책상" style="--띠:var(--일함);--띠바탕:var(--일함바탕)"><div class="이름줄"><span class="이름">제작자</span><span class="딱지">일하는 중</span></div><div class="역할">비교표 · 공지 만들기</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">현장공지.xlsx</span><span class="때">11/18 14:12 · 방금</span></div>
+</div>
+<div class="책상" style="--띠:var(--있음);--띠바탕:var(--있음바탕)"><div class="이름줄"><span class="이름">감시자</span><span class="딱지">자리에 있음</span></div><div class="역할">빠진 것 · 묵은 것 세기</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">감시자_20261118_093159.log</span><span class="때">11/18 09:32 · 4시간 40분 전</span></div>
+<div class="출근표">출근 09:30</div>
+</div>
+<div class="책상" style="--띠:var(--있음);--띠바탕:var(--있음바탕)"><div class="이름줄"><span class="이름">검증자</span><span class="딱지">자리에 있음</span></div><div class="역할">공지 확정 전 대조</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">검증자_20261118_120018.log</span><span class="때">11/18 12:08 · 2시간 3분 전</span></div>
+</div>
+<div class="책상" style="--띠:var(--있음);--띠바탕:var(--있음바탕)"><div class="이름줄"><span class="이름">규명자</span><span class="딱지">자리에 있음</span></div><div class="역할">이미지 단가표 판독</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">판독_GL_11월10일.csv</span><span class="때">11/17 20:37 · 17시간 전</span></div>
+<div class="덧">판독본 18장</div>
+</div>
+</div>
+<h2>정산 — 틀린 것을 잡는다</h2><div class="층">
+<div class="책상" style="--띠:var(--조용);--띠바탕:var(--조용바탕)"><div class="이름줄"><span class="이름">정산 명령자</span><span class="딱지">조용함</span></div><div class="역할">오정산 판정</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">대표판정.csv</span><span class="때">11/12 17:57 · 5일 전</span></div>
+</div>
+<div class="책상" style="--띠:var(--아직);--띠바탕:var(--아직바탕)"><div class="이름줄"><span class="이름">정산 대사자</span><span class="딱지">출근 전</span></div><div class="역할">텔킷 ↔ 단가표 대조</div>
+<div class="한일"><span class="무엇">마지막으로 남긴 것</span><span class="파일">대사자_20261117_224609.log</span><span class="때">11/17 22:49 · 15시간 전</span></div>
+<div class="덧">열린 건 73건</div>
+<div class="출근표">출근 22:30</div>
+</div>
+</div>
+<footer><p>이 화면은 스스로 갱신되지 않습니다 — 위의 기준 시각이 오래됐다면 <b>만드는 쪽이 멎은 것</b>이니 그것부터 보세요.</p><p>자리의 상태는 그 자리가 실제로 남긴 파일의 시각에서만 나옵니다. 돌았다고 적지 않고, 남긴 것이 있으면 그것을 적습니다.</p></footer></div>
+</body>
+</html>
